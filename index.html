@@ -453,6 +453,17 @@
     enemyImages.basic.loaded = false;
     enemyImages.basic.onload = function() { enemyImages.basic.loaded = true; };
 
+    // Sound effects
+    const bladeHitSound = new Audio('ฟันดาบ.wav');
+    bladeHitSound.volume = 0.3;
+
+    function playBladeHitSound() {
+        // Clone and play to allow overlapping sounds
+        const sound = bladeHitSound.cloneNode();
+        sound.volume = 0.3;
+        sound.play().catch(() => {}); // Catch to prevent errors if sound can't play
+    }
+
     // Resize canvas to fill screen
     function resizeCanvas() {
         canvas.width = window.innerWidth;
@@ -613,8 +624,8 @@
             damage: 5,
             xp: 8,
             bladeLevel: 2,
-            minBlades: 3,
-            maxBlades: 6
+            minBlades: 2,
+            maxBlades: 4
         },
         tank: {
             name: 'Tank',
@@ -626,7 +637,7 @@
             xp: 25,
             bladeLevel: 3, // Higher level enemies use lv2 blades
             minBlades: 3,
-            maxBlades: 5
+            maxBlades: 4
         },
         elite: {
             name: 'Elite',
@@ -896,30 +907,21 @@
     function spawnItem(x, y, enemyBladeLevel = 1) {
         if (Math.random() > GAME_CONFIG.ITEM_DROP_CHANCE) return;
 
-        // Random chance to drop different blade levels (based on enemy blade level)
-        let bladeLevel = 1;
-        const rand = Math.random();
-        if (rand < 0.6) {
-            // 60% chance: drop blade level 1
-            bladeLevel = 1;
-        } else if (rand < 0.85) {
-            // 25% chance: drop blade level 2
-            bladeLevel = 2;
-        } else if (rand < 0.95) {
-            // 10% chance: drop blade level 3
-            bladeLevel = 3;
-        } else if (rand < 0.99) {
-            // 4% chance: drop blade level 4
-            bladeLevel = 4;
-        } else {
-            // 1% chance: drop blade level 5
-            bladeLevel = 5;
+        // 20% chance to drop HP potion instead of blade
+        if (Math.random() < 0.2) {
+            items.push({
+                x: x,
+                y: y,
+                size: 14,
+                type: ITEM_TYPES.heal,
+                lifetime: 10000, // 10 seconds
+                spawned: Date.now()
+            });
+            return;
         }
 
-        // Higher level enemies have better drops
-        if (enemyBladeLevel >= 2) {
-            bladeLevel = Math.min(5, bladeLevel + 1);
-        }
+        // Drop blade at enemy blade level + 1 (capped at level 10)
+        const bladeLevel = Math.min(10, enemyBladeLevel + 1);
 
         const type = ITEM_TYPES[`blade${bladeLevel}`] || ITEM_TYPES.blade;
 
@@ -1254,6 +1256,9 @@
 
     // Handle blade vs blade collision
     function handleBladeCollision(playerBlade, enemyBlade, enemyIndex, enemyBladeIndex, playerBladeIndex) {
+        // Play blade hit sound
+        playBladeHitSound();
+        
         const playerLevel = playerBlade.level;
         const enemyLevel = enemyBlade.level;
         
