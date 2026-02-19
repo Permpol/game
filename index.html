@@ -969,7 +969,11 @@
         });
         const avgSpeedMult = playerBlades.length > 0 ? totalSpeedMult / playerBlades.length : 1;
         
-        blades.angle += blades.rotationSpeed * avgSpeedMult;
+        // Bonus speed based on blade count (more blades = faster rotation)
+        // Each additional blade adds 5% speed bonus
+        const bladeCountBonus = 1 + (playerBlades.length - 1) * 0.05;
+        
+        blades.angle += blades.rotationSpeed * avgSpeedMult * bladeCountBonus;
         // Update individual blade angles
         playerBlades.forEach((blade, i) => {
             blade.angle = blades.angle + (Math.PI * 2 * i) / playerBlades.length;
