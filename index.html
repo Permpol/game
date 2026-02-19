@@ -314,6 +314,45 @@
             transform: scale(1.1);
             box-shadow: 0 0 30px rgba(245, 87, 108, 0.6);
         }
+
+        /* Virtual Joystick */
+        #joystickContainer {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 120px;
+            height: 120px;
+            pointer-events: auto;
+            z-index: 100;
+        }
+
+        #joystickBase {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 3px solid rgba(0, 212, 255, 0.5);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        #joystickThumb {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            left: 35px;
+            top: 35px;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+            transition: none;
+        }
+
+        #joystickThumb.active {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.8);
+        }
     </style>
 </head>
 <body>
@@ -367,6 +406,7 @@
             <div class="controls">
                 <strong>Controls:</strong><br>
                 WASD or Arrow Keys - Move<br>
+                Use Joystick (bottom-right) for touch/mouse control<br>
                 Blades rotate and attack automatically<br>
                 Collect items to power up!<br><br>
                 <strong>Blade Level System:</strong><br>
@@ -374,6 +414,12 @@
                 Higher level blades deal more damage!
             </div>
             <button id="startBtn">▶ START GAME</button>
+        </div>
+
+        <!-- Virtual Joystick -->
+        <div id="joystickContainer">
+            <div id="joystickBase"></div>
+            <div id="joystickThumb"></div>
         </div>
     </div>
 
@@ -547,7 +593,7 @@
             damage: 10,
             xp: 10,
             bladeLevel: 1, // Basic enemies use lv1 blades
-            minBlades: 1,
+            minBlades: 2,
             maxBlades: 5
         },
         fast: {
@@ -558,9 +604,9 @@
             color: '#ffa502',
             damage: 5,
             xp: 8,
-            bladeLevel: 1,
-            minBlades: 1,
-            maxBlades: 3
+            bladeLevel: 2,
+            minBlades: 3,
+            maxBlades: 6
         },
         tank: {
             name: 'Tank',
@@ -568,10 +614,10 @@
             speed: 0.8,
             size: 30,
             color: '#8b0000',
-            damage: 25,
+            damage: 35,
             xp: 25,
-            bladeLevel: 2, // Higher level enemies use lv2 blades
-            minBlades: 1,
+            bladeLevel: 3, // Higher level enemies use lv2 blades
+            minBlades: 3,
             maxBlades: 5
         },
         elite: {
@@ -580,11 +626,11 @@
             speed: 1.2,
             size: 25,
             color: '#9400d3',
-            damage: 20,
+            damage: 40,
             xp: 40,
-            bladeLevel: 2,
-            minBlades: 2,
-            maxBlades: 5
+            bladeLevel: 5,
+            minBlades: 5,
+            maxBlades: 7
         }
     };
 
@@ -630,77 +676,110 @@
         }
     });
 
-    // Mouse/Touch control for dragging player
-    let isDragging = false;
-    let dragTarget = null;
+    // Virtual Joystick System
+    const joystickContainer = document.getElementById('joystickContainer');
+    const joystickThumb = document.getElementById('joystickThumb');
+    const joystickInput = { x: 0, y: 0 };
+    let joystickActive = false;
 
-    canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        
-        // Check if clicking on player
-        if (distance(mouseX, mouseY, player.x, player.y) < player.size * 2) {
-            isDragging = true;
-            dragTarget = 'player';
+    // Joystick Mouse Events
+    joystickContainer.addEventListener('mousedown', (e) => {
+        joystickActive = true;
+        joystickThumb.classList.add('active');
+        handleJoystickMove(e);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (joystickActive) {
+            handleJoystickMove(e);
         }
     });
 
-    canvas.addEventListener('mousemove', (e) => {
-        if (isDragging && dragTarget === 'player' && game.running && !game.paused) {
-            const rect = canvas.getBoundingClientRect();
-            player.x = e.clientX - rect.left;
-            player.y = e.clientY - rect.top;
-            
-            // Keep player in bounds
-            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
-            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
-        }
+    document.addEventListener('mouseup', () => {
+        joystickActive = false;
+        joystickThumb.classList.remove('active');
+        resetJoystick();
     });
 
-    canvas.addEventListener('mouseup', () => {
-        isDragging = false;
-        dragTarget = null;
-    });
-
-    canvas.addEventListener('mouseleave', () => {
-        isDragging = false;
-        dragTarget = null;
-    });
-
-    // Touch support
-    canvas.addEventListener('touchstart', (e) => {
+    // Joystick Touch Events
+    joystickContainer.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
+        joystickActive = true;
+        joystickThumb.classList.add('active');
+        handleJoystickTouch(e);
+    }, { passive: false });
+
+    document.addEventListener('touchmove', (e) => {
+        if (joystickActive) {
+            handleJoystickTouch(e);
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+        joystickActive = false;
+        joystickThumb.classList.remove('active');
+        resetJoystick();
+    });
+
+    function handleJoystickMove(e) {
+        const rect = joystickContainer.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        let dx = e.clientX - centerX;
+        let dy = e.clientY - centerY;
+        
+        // Limit to joystick radius
+        const maxRadius = 35; // Half of base (60) minus thumb radius (25)
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist > maxRadius) {
+            dx = (dx / dist) * maxRadius;
+            dy = (dy / dist) * maxRadius;
+        }
+        
+        // Update thumb position
+        joystickThumb.style.left = (35 + dx) + 'px';
+        joystickThumb.style.top = (35 + dy) + 'px';
+        
+        // Normalize input to -1 to 1
+        joystickInput.x = dx / maxRadius;
+        joystickInput.y = dy / maxRadius;
+    }
+
+    function handleJoystickTouch(e) {
         const touch = e.touches[0];
-        const touchX = touch.clientX - rect.left;
-        const touchY = touch.clientY - rect.top;
+        const rect = joystickContainer.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
         
-        // Check if touching player
-        if (distance(touchX, touchY, player.x, player.y) < player.size * 3) {
-            isDragging = true;
-            dragTarget = 'player';
+        let dx = touch.clientX - centerX;
+        let dy = touch.clientY - centerY;
+        
+        // Limit to joystick radius
+        const maxRadius = 35;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist > maxRadius) {
+            dx = (dx / dist) * maxRadius;
+            dy = (dy / dist) * maxRadius;
         }
-    }, { passive: false });
+        
+        // Update thumb position
+        joystickThumb.style.left = (35 + dx) + 'px';
+        joystickThumb.style.top = (35 + dy) + 'px';
+        
+        // Normalize input to -1 to 1
+        joystickInput.x = dx / maxRadius;
+        joystickInput.y = dy / maxRadius;
+    }
 
-    canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (isDragging && dragTarget === 'player' && game.running && !game.paused) {
-            const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            player.x = touch.clientX - rect.left;
-            player.y = touch.clientY - rect.top;
-            
-            // Keep player in bounds
-            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
-            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
-        }
-    }, { passive: false });
-
-    canvas.addEventListener('touchend', () => {
-        isDragging = false;
-        dragTarget = null;
-    });
+    function resetJoystick() {
+        joystickThumb.style.left = '35px';
+        joystickThumb.style.top = '35px';
+        joystickInput.x = 0;
+        joystickInput.y = 0;
+    }
 
     // ==========================================
     // UTILITY FUNCTIONS
@@ -934,15 +1013,23 @@
     function updatePlayer(deltaTime) {
         let dx = 0, dy = 0;
 
+        // Keyboard input
         if (keys.w || keys.ArrowUp) dy -= 1;
         if (keys.s || keys.ArrowDown) dy += 1;
         if (keys.a || keys.ArrowLeft) dx -= 1;
         if (keys.d || keys.ArrowRight) dx += 1;
 
+        // Joystick input (adds to keyboard input)
+        if (Math.abs(joystickInput.x) > 0.1 || Math.abs(joystickInput.y) > 0.1) {
+            dx += joystickInput.x;
+            dy += joystickInput.y;
+        }
+
         // Normalize diagonal movement
         if (dx !== 0 && dy !== 0) {
-            dx *= 0.707;
-            dy *= 0.707;
+            const mag = Math.sqrt(dx * dx + dy * dy);
+            dx = (dx / mag);
+            dy = (dy / mag);
         }
 
         player.x += dx * player.speed;
@@ -1675,17 +1762,51 @@
             ctx.arc(item.x, item.y, item.size * 2 * pulse, 0, Math.PI * 2);
             ctx.fill();
 
-            // Item body
-            ctx.fillStyle = item.type.color;
-            ctx.beginPath();
-            ctx.arc(item.x, item.y, item.size * pulse, 0, Math.PI * 2);
-            ctx.fill();
+            // Check if this is a blade item - use blade image
+            if (item.type.effect === 'blade' && item.bladeLevel) {
+                const bladeLevel = item.bladeLevel;
+                const img = bladeImages[bladeLevel];
+                const imageSize = item.size * 2 * pulse;
+                
+                if (img && img.loaded) {
+                    // Draw rotating blade image
+                    ctx.save();
+                    ctx.translate(item.x, item.y);
+                    ctx.rotate(Date.now() / 500); // Slow rotation
+                    ctx.drawImage(img, -imageSize / 2, -imageSize / 2, imageSize, imageSize);
+                    ctx.restore();
+                    
+                    // Draw level indicator
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 8px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`Lv${bladeLevel}`, item.x, item.y + imageSize / 2 + 10);
+                } else {
+                    // Fallback: draw colored circle
+                    ctx.fillStyle = item.type.color;
+                    ctx.beginPath();
+                    ctx.arc(item.x, item.y, item.size * pulse, 0, Math.PI * 2);
+                    ctx.fill();
 
-            // Item center
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(item.x, item.y, item.size * 0.4 * pulse, 0, Math.PI * 2);
-            ctx.fill();
+                    // Show level number
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${bladeLevel}`, item.x, item.y + 4);
+                }
+            } else {
+                // Non-blade items: draw circle
+                ctx.fillStyle = item.type.color;
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, item.size * pulse, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Item center
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, item.size * 0.4 * pulse, 0, Math.PI * 2);
+                ctx.fill();
+            }
         });
     }
 
