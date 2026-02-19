@@ -436,14 +436,22 @@
     playerImage.loaded = false;
     playerImage.onload = function() { playerImage.loaded = true; };
 
-    // Blade images for each level
+    // Blade images for each level (1-10)
     const bladeImages = {};
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 10; i++) {
         bladeImages[i] = new Image();
         bladeImages[i].src = `lv${i}.png`;
         bladeImages[i].loaded = false;
         bladeImages[i].onload = function() { bladeImages[i].loaded = true; };
     }
+
+    // Enemy images
+    const enemyImages = {
+        basic: new Image()
+    };
+    enemyImages.basic.src = 'Basic.png';
+    enemyImages.basic.loaded = false;
+    enemyImages.basic.onload = function() { enemyImages.basic.loaded = true; };
 
     // Resize canvas to fill screen
     function resizeCanvas() {
@@ -542,14 +550,14 @@
 
     // Consolidate blades (5 blades of same level = 1 blade of next level)
     function consolidateBlades() {
-        // Count blades by level
+        // Count blades by level (1-10)
         const bladeCounts = {};
-        for (let i = 1; i <= 5; i++) {
+        for (let i = 1; i <= 10; i++) {
             bladeCounts[i] = playerBlades.filter(b => b.level === i).length;
         }
 
-        // Convert blades when we have 5 or more of the same level
-        for (let level = 1; level <= 4; level++) {
+        // Convert blades when we have 5 or more of the same level (up to level 9)
+        for (let level = 1; level <= 9; level++) {
             while (bladeCounts[level] >= GAME_CONFIG.BLADES_TO_LEVEL_UP) {
                 // Remove 5 blades of this level
                 let removed = 0;
@@ -1485,15 +1493,15 @@
         document.getElementById('hpBar').style.width = `${hpPercent}%`;
         document.getElementById('hpText').textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
 
-        // Count blades by level
+        // Count blades by level (1-10)
         const bladeCounts = {};
-        for (let i = 1; i <= 5; i++) {
+        for (let i = 1; i <= 10; i++) {
             bladeCounts[i] = playerBlades.filter(b => b.level === i).length;
         }
         
         // Format blade display
         let bladeText = '';
-        for (let i = 5; i >= 1; i--) {
+        for (let i = 10; i >= 1; i--) {
             if (bladeCounts[i] > 0) {
                 if (bladeText) bladeText += ' ';
                 bladeText += `Lv${i}x${bladeCounts[i]}`;
@@ -1722,11 +1730,17 @@
             ctx.arc(enemy.x, enemy.y, enemy.size * 1.5, 0, Math.PI * 2);
             ctx.fill();
 
-            // Enemy body
-            ctx.fillStyle = enemy.color;
-            ctx.beginPath();
-            ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
-            ctx.fill();
+            // Draw enemy body - use image for Basic enemy type
+            if (enemy.type === 'Basic' && enemyImages.basic.loaded) {
+                const imgSize = enemy.size * 2.5;
+                ctx.drawImage(enemyImages.basic, enemy.x - imgSize / 2, enemy.y - imgSize / 2, imgSize, imgSize);
+            } else {
+                // Fallback: draw colored circle
+                ctx.fillStyle = enemy.color;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
             // HP bar
             const hpWidth = enemy.size * 2;
