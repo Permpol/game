@@ -445,13 +445,34 @@
         bladeImages[i].onload = function() { bladeImages[i].loaded = true; };
     }
 
-    // Enemy images
+    // Enemy images - Load all enemy types
     const enemyImages = {
-        basic: new Image()
+        basic: new Image(),
+        fast: new Image(),
+        tank: new Image(),
+        elite: new Image()
     };
     enemyImages.basic.src = 'Basic.png';
     enemyImages.basic.loaded = false;
     enemyImages.basic.onload = function() { enemyImages.basic.loaded = true; };
+    
+    enemyImages.fast.src = 'fast.png';
+    enemyImages.fast.loaded = false;
+    enemyImages.fast.onload = function() { enemyImages.fast.loaded = true; };
+    
+    enemyImages.tank.src = 'tank.png';
+    enemyImages.tank.loaded = false;
+    enemyImages.tank.onload = function() { enemyImages.tank.loaded = true; };
+    
+    enemyImages.elite.src = 'elite.png';
+    enemyImages.elite.loaded = false;
+    enemyImages.elite.onload = function() { enemyImages.elite.loaded = true; };
+    
+    // HP_up item image
+    const hpUpImage = new Image();
+    hpUpImage.src = 'HP_up.png';
+    hpUpImage.loaded = false;
+    hpUpImage.onload = function() { hpUpImage.loaded = true; };
 
     // Sound effects
     const bladeHitSound = new Audio('ฟันดาบ.wav');
@@ -1735,10 +1756,27 @@
             ctx.arc(enemy.x, enemy.y, enemy.size * 1.5, 0, Math.PI * 2);
             ctx.fill();
 
-            // Draw enemy body - use image for Basic enemy type
-            if (enemy.type === 'Basic' && enemyImages.basic.loaded) {
+            // Draw enemy body - use image for each enemy type
+            let enemyImg = null;
+            let imgLoaded = false;
+            
+            if (enemy.type === 'Basic') {
+                enemyImg = enemyImages.basic;
+                imgLoaded = enemyImages.basic.loaded;
+            } else if (enemy.type === 'Fast') {
+                enemyImg = enemyImages.fast;
+                imgLoaded = enemyImages.fast.loaded;
+            } else if (enemy.type === 'Tank') {
+                enemyImg = enemyImages.tank;
+                imgLoaded = enemyImages.tank.loaded;
+            } else if (enemy.type === 'Elite') {
+                enemyImg = enemyImages.elite;
+                imgLoaded = enemyImages.elite.loaded;
+            }
+            
+            if (enemyImg && imgLoaded) {
                 const imgSize = enemy.size * 2.5;
-                ctx.drawImage(enemyImages.basic, enemy.x - imgSize / 2, enemy.y - imgSize / 2, imgSize, imgSize);
+                ctx.drawImage(enemyImg, enemy.x - imgSize / 2, enemy.y - imgSize / 2, imgSize, imgSize);
             } else {
                 // Fallback: draw colored circle
                 ctx.fillStyle = enemy.color;
@@ -1813,8 +1851,25 @@
                     ctx.textAlign = 'center';
                     ctx.fillText(`${bladeLevel}`, item.x, item.y + 4);
                 }
+            } else if (item.type.effect === 'heal') {
+                // HP heal item - use HP_up image
+                if (hpUpImage.loaded) {
+                    const imgSize = item.size * 2 * pulse;
+                    ctx.drawImage(hpUpImage, item.x - imgSize / 2, item.y - imgSize / 2, imgSize, imgSize);
+                } else {
+                    // Fallback: draw colored circle with + symbol
+                    ctx.fillStyle = item.type.color;
+                    ctx.beginPath();
+                    ctx.arc(item.x, item.y, item.size * pulse, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('+', item.x, item.y + 5);
+                }
             } else {
-                // Non-blade items: draw circle
+                // Other items: draw circle
                 ctx.fillStyle = item.type.color;
                 ctx.beginPath();
                 ctx.arc(item.x, item.y, item.size * pulse, 0, Math.PI * 2);
