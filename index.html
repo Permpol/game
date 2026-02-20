@@ -921,7 +921,7 @@
         }
 
         // Drop blade at enemy blade level + 1 (capped at level 10)
-        const bladeLevel = Math.min(10, enemyBladeLevel + 1);
+        const bladeLevel = Math.min(10, enemyBladeLevel + 2);
 
         const type = ITEM_TYPES[`blade${bladeLevel}`] || ITEM_TYPES.blade;
 
